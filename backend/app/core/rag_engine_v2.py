@@ -23,7 +23,7 @@ class RAGEngineV2:
     
     功能：
     1. 加载标准知识库
-    2. 使用语义嵌入模型向量化规则（支持千问3/BGE）
+    2. 使用语义嵌入模型向量化规则（支持BGE）
     3. 使用 FAISS 进行高效向量检索
     4. 混合检索（语义+关键词）
     
@@ -141,6 +141,11 @@ class RAGEngineV2:
         
         logger.info("🔨 开始构建语义向量索引...")
         
+        # 清空旧索引（重要！避免累积）
+        self.rule_index = []
+        self.rule_vectors = None
+        self.faiss_index = None
+        
         # 收集所有规则
         all_rules = []
         for standard in self.standards.values():
@@ -184,7 +189,7 @@ class RAGEngineV2:
             )
         
         # 构建 FAISS 索引（可选，用于大规模检索加速）
-        if self.use_faiss:
+        if self.use_faiss: 
             dimension = self.rule_vectors.shape[1]
             self.faiss_index = faiss.IndexFlatIP(dimension)  # 内积索引（归一化后等价于余弦相似度）
             self.faiss_index.add(self.rule_vectors.astype('float32'))
@@ -264,6 +269,8 @@ class RAGEngineV2:
             # 获取 top-k（扩大候选集，后续过滤）
             candidate_k = min(top_k * 2, len(final_scores))
             top_local_indices = np.argsort(final_scores)[-candidate_k:][::-1]
+            # 确保索引不越界
+            top_local_indices = top_local_indices[top_local_indices < len(protocol_indices)]
             top_indices = [protocol_indices[i] for i in top_local_indices]
             top_similarities = semantic_similarities[top_local_indices]
             top_scores = final_scores[top_local_indices]
@@ -453,12 +460,30 @@ class RAGEngineV2:
         try:
             with open(file_path, 'rb') as f:
                 data = pickle.load(f)
-                self.rule_vectors = data["rule_vectors"]
-                self.rule_index = data["rule_index"]
+                saved_rule_vectors = data["rule_vectors"]
+                saved_rule_index = data["rule_index"]
                 saved_model_name = data.get("model_name")
                 
+                # 验证索引是否与当前标准库一致
+                current_rule_count = sum(
+                    len(cat.rules) 
+                    for std in self.standards.values() 
+                    for cat in std.categories
+                )
+                
+                if len(saved_rule_index) != current_rule_count:
+                    logger.warning(f"⚠️ 索引规则数 ({len(saved_rule_index)}) 与当前标准库 ({current_rule_count}) 不一致，重新构建索引")
+                    self._build_vector_index()
+                    return
+                
                 if saved_model_name != self.model_name:
-                    logger.warning(f"索引使用的模型 ({saved_model_name}) 与当前模型 ({self.model_name}) 不同")
+                    logger.warning(f"索引使用的模型 ({saved_model_name}) 与当前模型 ({self.model_name}) 不同，重新构建索引")
+                    self._build_vector_index()
+                    return
+                
+                # 索引有效，加载
+                self.rule_vectors = saved_rule_vectors
+                self.rule_index = saved_rule_index
             
             # 加载 FAISS 索引
             if self.use_faiss:
@@ -467,7 +492,7 @@ class RAGEngineV2:
                     self.faiss_index = faiss.read_index(faiss_path)
                     logger.info(f"FAISS 索引已加载: {faiss_path}")
             
-            logger.info(f"向量索引已加载: {file_path}")
+            logger.info(f"✅ 向量索引已加载: {file_path} ({len(self.rule_index)} 条规则)")
         except Exception as e:
             logger.error(f"加载向量索引失败: {e}")
             logger.info("将重新构建索引...")

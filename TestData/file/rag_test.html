@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RAG检索测试 - DocReviewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        h1 {
+            color: #f5576c;
+            margin-bottom: 10px;
+            font-size: 32px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .test-section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        textarea, select, input {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s;
+        }
+
+        textarea {
+            min-height: 120px;
+            resize: vertical;
+        }
+
+        textarea:focus, select:focus, input:focus {
+            outline: none;
+            border-color: #f5576c;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(245, 87, 108, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .results-section {
+            display: none;
+        }
+
+        .result-card {
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            border-left: 5px solid #f5576c;
+            transition: transform 0.2s;
+        }
+
+        .result-card:hover {
+            transform: translateX(5px);
+        }
+
+        .rule-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        .rule-id {
+            font-weight: bold;
+            color: #f5576c;
+            font-size: 18px;
+        }
+
+        .scores {
+            display: flex;
+            gap: 10px;
+        }
+
+        .score-badge {
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 13px;
+            font-weight: bold;
+        }
+
+        .score-semantic {
+            background: #e3f2fd;
+            color: #1976d2;
+        }
+
+        .score-hybrid {
+            background: #f3e5f5;
+            color: #7b1fa2;
+        }
+
+        .score-high {
+            background: #c8e6c9;
+            color: #388e3c;
+        }
+
+        .score-medium {
+            background: #fff9c4;
+            color: #f57c00;
+        }
+
+        .score-low {
+            background: #ffcdd2;
+            color: #d32f2f;
+        }
+
+        .rule-description {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 15px;
+            line-height: 1.6;
+        }
+
+        .rule-meta {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .meta-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .meta-label {
+            color: #666;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .meta-value {
+            color: #333;
+        }
+
+        .examples {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-top: 15px;
+        }
+
+        .example-box {
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 13px;
+        }
+
+        .example-positive {
+            background: #e8f5e9;
+            border-left: 3px solid #4caf50;
+        }
+
+        .example-negative {
+            background: #ffebee;
+            border-left: 3px solid #f44336;
+        }
+
+        .example-title {
+            font-weight: bold;
+            margin-bottom: 8px;
+        }
+
+        .example-text {
+            color: #555;
+            line-height: 1.5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 18px;
+        }
+
+        .spinner {
+            border: 4px solid rgba(255,255,255,0.3);
+            border-top: 4px solid white;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 20px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .stats-bar {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            text-align: center;
+        }
+
+        .stat-item {
+            padding: 15px;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            color: white;
+            border-radius: 8px;
+        }
+
+        .stat-value {
+            font-size: 28px;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            opacity: 0.9;
+        }
+
+        .explanation {
+            background: #fff3e0;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #ff9800;
+        }
+
+        .explanation h3 {
+            color: #e65100;
+            margin-bottom: 10px;
+        }
+
+        .explanation p {
+            color: #555;
+            line-height: 1.6;
+            margin-bottom: 8px;
+        }
+
+        .keywords {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .keyword-tag {
+            background: #e1bee7;
+            color: #6a1b9a;
+            padding: 5px 12px;
+            border-radius: 15px;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔍 RAG检索测试工具</h1>
+            <p class="subtitle">输入文本，查看RAG如何检索相关规则，理解语义匹配过程</p>
+        </div>
+
+        <div class="explanation">
+            <h3>💡 工作原理</h3>
+            <p><strong>1. 向量化：</strong>输入文本通过BGE模型转换为768维向量</p>
+            <p><strong>2. 语义匹配：</strong>计算文本向量与所有规则向量的余弦相似度（0-1之间）</p>
+            <p><strong>3. 关键词匹配：</strong>统计文本中包含的规则关键词数量</p>
+            <p><strong>4. 混合评分：</strong>语义分数 × 70% + 关键词分数 × 30% = 最终分数</p>
+            <p><strong>5. 阈值过滤：</strong>根据规则类型应用不同阈值（format类更严格）</p>
+        </div>
+
+        <div class="test-section">
+            <form id="testForm">
+                <div class="form-group">
+                    <label for="testText">测试文本（模拟文档中的某段内容）</label>
+                    <textarea id="testText" placeholder="例如：第一章 引言&#10;&#10;本文档旨在规范公文写作格式..."></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label for="protocolId">选择标准协议</label>
+                    <select id="protocolId">
+                        <option value="">加载中...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="topK">返回规则数量</label>
+                    <input type="number" id="topK" value="5" min="1" max="20">
+                </div>
+
+                <button type="submit" class="btn">🚀 开始检索</button>
+            </form>
+        </div>
+
+        <div id="loadingSection" class="loading" style="display: none;">
+            <div class="spinner"></div>
+            <p>正在检索相关规则...</p>
+        </div>
+
+        <div id="statsBar" class="stats-bar">
+            <div class="stats-grid">
+                <div class="stat-item">
+                    <div class="stat-value" id="totalMatched">0</div>
+                    <div class="stat-label">匹配规则数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="avgSemantic">0</div>
+                    <div class="stat-label">平均语义分</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="avgHybrid">0</div>
+                    <div class="stat-label">平均综合分</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-value" id="highScoreCount">0</div>
+                    <div class="stat-label">高分规则(>0.7)</div>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsSection" class="results-section"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+
+        // 加载协议列表
+        async function loadProtocols() {
+            try {
+                const response = await fetch(`${API_BASE}/api/review/protocols`);
+                const data = await response.json();
+                
+                const select = document.getElementById('protocolId');
+                select.innerHTML = data.protocols.map(p => 
+                    `<option value="${p.protocol_id}">${p.name} (${p.version})</option>`
+                ).join('');
+            } catch (error) {
+                console.error('加载协议失败:', error);
+                alert('无法连接到后端服务，请确保服务已启动');
+            }
+        }
+
+        // 提交测试
+        document.getElementById('testForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const text = document.getElementById('testText').value.trim();
+            const protocolId = document.getElementById('protocolId').value;
+            const topK = document.getElementById('topK').value;
+
+            if (!text) {
+                alert('请输入测试文本');
+                return;
+            }
+
+            if (!protocolId) {
+                alert('请选择标准协议');
+                return;
+            }
+
+            // 显示加载状态
+            document.getElementById('loadingSection').style.display = 'block';
+            document.getElementById('resultsSection').style.display = 'none';
+            document.getElementById('statsBar').style.display = 'none';
+
+            const formData = new FormData();
+            formData.append('text', text);
+            formData.append('protocol_id', protocolId);
+            formData.append('top_k', topK);
+
+            try {
+                const response = await fetch(`${API_BASE}/api/review/document/test-retrieval`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                console.error('检索失败:', error);
+                alert(`检索失败: ${error.message}`);
+            } finally {
+                document.getElementById('loadingSection').style.display = 'none';
+            }
+        });
+
+        function displayResults(data) {
+            const container = document.getElementById('resultsSection');
+            container.style.display = 'block';
+            container.innerHTML = '';
+
+            if (data.rules.length === 0) {
+                container.innerHTML = '<div class="result-card"><p style="text-align:center;color:#999;">未找到匹配的规则</p></div>';
+                return;
+            }
+
+            // 显示统计信息
+            const statsBar = document.getElementById('statsBar');
+            statsBar.style.display = 'block';
+            
+            const totalMatched = data.rules.length;
+            const avgSemantic = (data.rules.reduce((sum, r) => sum + r.similarity, 0) / totalMatched).toFixed(3);
+            const avgHybrid = (data.rules.reduce((sum, r) => sum + r.hybrid_score, 0) / totalMatched).toFixed(3);
+            const highScoreCount = data.rules.filter(r => r.hybrid_score > 0.7).length;
+
+            document.getElementById('totalMatched').textContent = totalMatched;
+            document.getElementById('avgSemantic').textContent = avgSemantic;
+            document.getElementById('avgHybrid').textContent = avgHybrid;
+            document.getElementById('highScoreCount').textContent = highScoreCount;
+
+            // 显示每条规则
+            data.rules.forEach((rule, index) => {
+                const card = document.createElement('div');
+                card.className = 'result-card';
+
+                const semanticScore = rule.similarity.toFixed(3);
+                const hybridScore = rule.hybrid_score.toFixed(3);
+                
+                let scoreClass = 'score-low';
+                if (hybridScore >= 0.7) scoreClass = 'score-high';
+                else if (hybridScore >= 0.5) scoreClass = 'score-medium';
+
+                const positiveExamples = rule.positive_examples.slice(0, 2);
+                const negativeExamples = rule.negative_examples.slice(0, 2);
+
+                card.innerHTML = `
+                    <div class="rule-header">
+                        <div class="rule-id">#${index + 1} ${rule.rule_id}</div>
+                        <div class="scores">
+                            <span class="score-badge score-semantic">语义: ${semanticScore}</span>
+                            <span class="score-badge score-hybrid ${scoreClass}">综合: ${hybridScore}</span>
+                        </div>
+                    </div>
+
+                    <div class="rule-description">${rule.description}</div>
+
+                    <div class="rule-meta">
+                        <div class="meta-item">
+                            <div class="meta-label">类别</div>
+                            <div class="meta-value">${rule.category}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">检查类型</div>
+                            <div class="meta-value">${rule.check_type}</div>
+                        </div>
+                        <div class="meta-item">
+                            <div class="meta-label">严重程度</div>
+                            <div class="meta-value">${rule.severity}</div>
+                        </div>
+                    </div>
+
+                    ${rule.keywords.length > 0 ? `
+                        <div class="keywords">
+                            ${rule.keywords.map(k => `<span class="keyword-tag">${k}</span>`).join('')}
+                        </div>
+                    ` : ''}
+
+                    ${positiveExamples.length > 0 || negativeExamples.length > 0 ? `
+                        <div class="examples">
+                            ${positiveExamples.length > 0 ? `
+                                <div class="example-box example-positive">
+                                    <div class="example-title">✅ 正确示例</div>
+                                    ${positiveExamples.map(ex => `<div class="example-text">• ${ex}</div>`).join('')}
+                                </div>
+                            ` : ''}
+                            ${negativeExamples.length > 0 ? `
+                                <div class="example-box example-negative">
+                                    <div class="example-title">❌ 错误示例</div>
+                                    ${negativeExamples.map(ex => `<div class="example-text">• ${ex}</div>`).join('')}
+                                </div>
+                            ` : ''}
+                        </div>
+                    ` : ''}
+                `;
+
+                container.appendChild(card);
+            });
+        }
+
+        // 页面加载时获取协议列表
+        loadProtocols();
+    </script>
+</body>
+</html>
+

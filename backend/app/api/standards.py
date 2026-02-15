@@ -32,7 +32,7 @@ async def upload_standard(
     file: UploadFile = File(..., description="标准文档（Word格式）"),
     protocol_id: Optional[str] = Form(None, description="协议ID（可选，默认从文件名生成）"),
     protocol_name: Optional[str] = Form(None, description="协议名称（可选，默认从文档提取）"),
-    use_llm: bool = Form(False, description="是否使用LLM辅助转换（更智能但较慢）")
+    use_llm: bool = Form(True, description="是否使用LLM辅助转换（更智能但较慢）")
 ):
     """
     上传标准文档并转换为JSON
@@ -506,7 +506,7 @@ async def reload_all_standards():
 @router.post("/batch-upload")
 async def batch_upload_standards(
     files: List[UploadFile] = File(..., description="多个标准文档"),
-    use_llm: bool = Form(False, description="是否使用LLM辅助")
+    use_llm: bool = Form(True, description="是否使用LLM辅助")
 ):
     """
     批量上传标准文档
