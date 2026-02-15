@@ -1,0 +1,337 @@
+{
+  "protocol_id": "软件单元测试记录DC",
+  "name": "（软件文档标识）",
+  "version": "1.0",
+  "description": "从 软件单元测试记录DC.docx 通过LLM提取",
+  "categories": [
+    {
+      "category": "范围",
+      "rules": [
+        {
+          "rule_id": "R001",
+          "description": "文档必须包含标识部分，给出系统和软件的完整标识，包括标识号、名称、缩略语、版本号及发行号等。",
+          "check_type": "structure",
+          "keywords": [
+            "标识",
+            "系统",
+            "软件",
+            "版本号",
+            "发行号"
+          ],
+          "positive_examples": [
+            "标识：XX软件，版本号1.0，发行号2023-001"
+          ],
+          "negative_examples": [
+            "标识部分缺失或信息不完整"
+          ],
+          "severity": "high"
+        },
+        {
+          "rule_id": "R002",
+          "description": "文档必须包含系统概述部分，描述系统和软件的用途、一般特性，以及开发、运行和维护历史。",
+          "check_type": "semantic",
+          "keywords": [
+            "系统概述",
+            "用途",
+            "特性",
+            "历史"
+          ],
+          "positive_examples": [
+            "系统概述：本软件用于数据处理，具有高可靠性，开发于2022年"
+          ],
+          "negative_examples": [
+            "系统概述部分缺失或内容过于简略"
+          ],
+          "severity": "medium"
+        },
+        {
+          "rule_id": "R003",
+          "description": "文档必须包含文档概述部分，概述文档的用途和内容。",
+          "check_type": "semantic",
+          "keywords": [
+            "文档概述",
+            "用途",
+            "内容"
+          ],
+          "positive_examples": [
+            "文档概述：本文档记录单元测试过程，包括测试结果和问题说明"
+          ],
+          "negative_examples": [
+            "文档概述部分缺失或未明确说明文档目的"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "category": "引用文档",
+      "rules": [
+        {
+          "rule_id": "R004",
+          "description": "文档必须列出所有引用文档的编号、标题、版本和日期。",
+          "check_type": "format",
+          "keywords": [
+            "引用文档",
+            "编号",
+            "标题",
+            "版本",
+            "日期"
+          ],
+          "positive_examples": [
+            "引用文档：XX软件详细设计说明（标识），版本1.0，2023-01-01"
+          ],
+          "negative_examples": [
+            "引用文档列表缺失或信息不完整"
+          ],
+          "severity": "high"
+        }
+      ]
+    },
+    {
+      "category": "测试结果概述",
+      "rules": [
+        {
+          "rule_id": "R005",
+          "description": "文档必须包含对被测试软件的总体评估说明，并使用表1（单元测试总体评估表）记录度量数据。",
+          "check_type": "structure",
+          "keywords": [
+            "总体评估",
+            "表1",
+            "度量表"
+          ],
+          "positive_examples": [
+            "总体评估：软件功能正常，性能达标，表1中记录了测试覆盖率等数据"
+          ],
+          "negative_examples": [
+            "总体评估部分缺失或未使用指定表格"
+          ],
+          "severity": "high"
+        },
+        {
+          "rule_id": "R006",
+          "description": "文档必须描述测试环境与实际环境的差异性，并评估其对测试结果的影响。",
+          "check_type": "semantic",
+          "keywords": [
+            "测试环境",
+            "差异性",
+            "影响",
+            "评估"
+          ],
+          "positive_examples": [
+            "测试环境影响：测试环境与实际环境差异小，对结果影响可忽略"
+          ],
+          "negative_examples": [
+            "测试环境影响部分缺失或未进行评估"
+          ],
+          "severity": "medium"
+        },
+        {
+          "rule_id": "R007",
+          "description": "文档必须给出测试充分性指标数据。",
+          "check_type": "semantic",
+          "keywords": [
+            "测试充分性",
+            "指标",
+            "数据"
+          ],
+          "positive_examples": [
+            "测试充分性结果：代码覆盖率95%，满足要求"
+          ],
+          "negative_examples": [
+            "测试充分性结果部分缺失或数据不明确"
+          ],
+          "severity": "high"
+        },
+        {
+          "rule_id": "R008",
+          "description": "文档必须提供改进建议，包括建议内容及其对软件的影响。",
+          "check_type": "semantic",
+          "keywords": [
+            "改进建议",
+            "设计",
+            "操作",
+            "测试",
+            "影响"
+          ],
+          "positive_examples": [
+            "改进建议：优化算法以提高性能，预计可减少10%处理时间"
+          ],
+          "negative_examples": [
+            "改进建议部分缺失或建议不具体"
+          ],
+          "severity": "low"
+        }
+      ]
+    },
+    {
+      "category": "静态检查记录",
+      "rules": [
+        {
+          "rule_id": "R009",
+          "description": "文档必须按Q/WE895（编码规则）及单元静态分析和代码审查要求进行静态检查，并在代码审查表中记录结果。",
+          "check_type": "structure",
+          "keywords": [
+            "静态检查",
+            "Q/WE895",
+            "代码审查",
+            "记录"
+          ],
+          "positive_examples": [
+            "静态检查记录：按Q/WE895检查，代码审查表记录了所有问题"
+          ],
+          "negative_examples": [
+            "静态检查记录缺失或未遵循指定规则"
+          ],
+          "severity": "high"
+        },
+        {
+          "rule_id": "R010",
+          "description": "检查结果可作为附件，问题需确认修改或由软件项目负责人签字，修改后应进行回归检查。",
+          "check_type": "semantic",
+          "keywords": [
+            "附件",
+            "问题",
+            "修改",
+            "回归检查"
+          ],
+          "positive_examples": [
+            "检查结果汇总为附件，问题已修改并回归检查通过"
+          ],
+          "negative_examples": [
+            "检查结果未处理或未进行回归检查"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "category": "单元测试记录",
+      "rules": [
+        {
+          "rule_id": "R011",
+          "description": "文档必须分小节或表记录单元动态测试情况，使用表2（单元测试记录表）或由测试工具自动生成。",
+          "check_type": "format",
+          "keywords": [
+            "单元测试记录",
+            "表2",
+            "动态测试",
+            "测试用例"
+          ],
+          "positive_examples": [
+            "单元测试记录：使用表2记录了模块A的测试用例和结果"
+          ],
+          "negative_examples": [
+            "单元测试记录缺失或格式不符合要求"
+          ],
+          "severity": "high"
+        },
+        {
+          "rule_id": "R012",
+          "description": "若合并单元集成测试记录，应给出集成顺序及对应测试用例，使用表3（单元集成及测试说明表）。",
+          "check_type": "structure",
+          "keywords": [
+            "单元集成",
+            "表3",
+            "顺序",
+            "测试用例"
+          ],
+          "positive_examples": [
+            "单元集成测试：按顺序集成模块，表3列出了测试用例"
+          ],
+          "negative_examples": [
+            "集成测试记录缺失或未使用指定表格"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "category": "问题说明",
+      "rules": [
+        {
+          "rule_id": "R013",
+          "description": "文档必须对单元测试中发现的问题及其处理进行说明，可使用表4（问题处理单）或从软件过程管理工具下载。",
+          "check_type": "structure",
+          "keywords": [
+            "问题说明",
+            "表4",
+            "问题处理",
+            "记录"
+          ],
+          "positive_examples": [
+            "问题说明：使用表4记录了问题描述、处理措施和状态"
+          ],
+          "negative_examples": [
+            "问题说明部分缺失或未使用指定格式"
+          ],
+          "severity": "high"
+        }
+      ]
+    },
+    {
+      "category": "需求追踪",
+      "rules": [
+        {
+          "rule_id": "R014",
+          "description": "文档必须包含正向追溯部分，使用表5（正向追溯表）记录需求与测试的对应关系。",
+          "check_type": "structure",
+          "keywords": [
+            "正向追溯",
+            "表5",
+            "需求",
+            "测试"
+          ],
+          "positive_examples": [
+            "正向追溯：表5列出了需求ID和对应的测试用例"
+          ],
+          "negative_examples": [
+            "正向追溯部分缺失或表格不完整"
+          ],
+          "severity": "medium"
+        },
+        {
+          "rule_id": "R015",
+          "description": "文档必须包含逆向追溯部分，使用表6（逆向追溯表）记录测试与需求的对应关系。",
+          "check_type": "structure",
+          "keywords": [
+            "逆向追溯",
+            "表6",
+            "测试",
+            "需求"
+          ],
+          "positive_examples": [
+            "逆向追溯：表6列出了测试用例和覆盖的需求ID"
+          ],
+          "negative_examples": [
+            "逆向追溯部分缺失或表格不完整"
+          ],
+          "severity": "medium"
+        }
+      ]
+    },
+    {
+      "category": "注释",
+      "rules": [
+        {
+          "rule_id": "R016",
+          "description": "文档必须包含注释部分，提供有助于了解文档的信息，如背景、术语、缩略语或公式。",
+          "check_type": "semantic",
+          "keywords": [
+            "注释",
+            "背景",
+            "术语",
+            "缩略语",
+            "公式"
+          ],
+          "positive_examples": [
+            "注释：包括术语定义和背景说明，如'API'表示应用程序接口"
+          ],
+          "negative_examples": [
+            "注释部分缺失或信息不足"
+          ],
+          "severity": "low"
+        }
+      ]
+    }
+  ]
+}

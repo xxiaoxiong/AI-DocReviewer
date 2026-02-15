@@ -1,0 +1,991 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DocReviewer - 文档审核系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .log-link {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .log-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        /* 左右分栏布局 */
+        .main-content {
+            flex: 1;
+            display: flex;
+            gap: 20px;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        /* 左侧操作区 */
+        .left-panel {
+            width: 400px;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        /* 右侧结果区 */
+        .right-panel {
+            flex: 1;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: auto;
+        }
+
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .upload-section {
+            border: 2px dashed #1e40af;
+            border-radius: 12px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            cursor: pointer;
+            background: #f8fafc;
+        }
+
+        .upload-section:hover {
+            border-color: #1e3a8a;
+            background: #eff6ff;
+        }
+
+        .upload-section.dragover {
+            background: #dbeafe;
+            border-color: #1e3a8a;
+            transform: scale(1.02);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+        }
+
+        .upload-text {
+            font-size: 16px;
+            color: #475569;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+
+        .file-input {
+            display: none;
+        }
+
+        .btn {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            color: white;
+            border: none;
+            padding: 14px 0;
+            width: 100%;
+            font-size: 16px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-weight: 600;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(30, 64, 175, 0.4);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .protocol-select {
+            width: 100%;
+            padding: 12px 15px;
+            font-size: 15px;
+            border: 2px solid #e2e8f0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            transition: all 0.3s;
+            background: white;
+        }
+
+        .protocol-select:focus {
+            outline: none;
+            border-color: #1e40af;
+            box-shadow: 0 0 0 3px rgba(30, 64, 175, 0.1);
+        }
+
+        .selected-file {
+            background: #eff6ff;
+            padding: 12px 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+            border: 1px solid #bfdbfe;
+        }
+
+        .selected-file.show {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .file-info {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #1e40af;
+            font-weight: 500;
+        }
+
+        .remove-file {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 13px;
+            transition: all 0.2s;
+        }
+
+        .remove-file:hover {
+            background: #dc2626;
+        }
+
+        .progress-section {
+            margin-top: 20px;
+            padding: 20px;
+            background: #f8fafc;
+            border-radius: 10px;
+            display: none;
+        }
+
+        .progress-section.show {
+            display: block;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #e2e8f0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-bottom: 15px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #1e40af 0%, #1e3a8a 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+
+        .progress-text {
+            font-size: 14px;
+            color: #64748b;
+            text-align: center;
+        }
+
+        /* 右侧结果区样式 */
+        .results-section {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+
+        .results-section.empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .empty-state {
+            text-align: center;
+            color: #94a3b8;
+        }
+
+        .empty-state-icon {
+            font-size: 64px;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+
+        .empty-state-text {
+            font-size: 16px;
+        }
+
+        .summary-cards {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .summary-card {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .summary-card.high {
+            background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+        }
+
+        .summary-card.medium {
+            background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+        }
+
+        .summary-card.low {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        }
+
+        .summary-number {
+            font-size: 36px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .summary-label {
+            font-size: 13px;
+            opacity: 0.95;
+        }
+
+        .issue-list-container {
+            flex: 1;
+            overflow-y: auto;
+            padding-right: 10px;
+        }
+
+        .issue-list-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .issue-list-container::-webkit-scrollbar-track {
+            background: #f1f5f9;
+            border-radius: 10px;
+        }
+
+        .issue-list-container::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 10px;
+        }
+
+        .issue-list-container::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+
+        .issue-item {
+            background: #f8fafc;
+            padding: 18px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border-left: 4px solid #1e40af;
+            transition: all 0.2s;
+        }
+
+        .issue-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transform: translateX(4px);
+        }
+
+        .issue-item.high {
+            border-left-color: #ef4444;
+        }
+
+        .issue-item.medium {
+            border-left-color: #f59e0b;
+        }
+
+        .issue-item.low {
+            border-left-color: #10b981;
+        }
+
+        .issue-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .issue-category {
+            font-weight: 600;
+            color: #1e293b;
+            font-size: 15px;
+        }
+
+        .issue-badge {
+            padding: 4px 12px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 600;
+            color: white;
+        }
+
+        .issue-badge.high {
+            background: #ef4444;
+        }
+
+        .issue-badge.medium {
+            background: #f59e0b;
+        }
+
+        .issue-badge.low {
+            background: #10b981;
+        }
+
+        .issue-position {
+            color: #64748b;
+            font-size: 13px;
+            margin-bottom: 10px;
+        }
+
+        .issue-text {
+            background: white;
+            padding: 10px;
+            border-radius: 6px;
+            margin-bottom: 10px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 13px;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+        }
+
+        .issue-description {
+            color: #475569;
+            margin-bottom: 10px;
+            line-height: 1.6;
+            font-size: 14px;
+        }
+
+        .issue-suggestion {
+            background: #ecfdf5;
+            padding: 10px;
+            border-radius: 6px;
+            color: #065f46;
+            line-height: 1.6;
+            font-size: 14px;
+            border: 1px solid #d1fae5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 15px;
+        }
+
+        .spinner {
+            border: 3px solid #e2e8f0;
+            border-top: 3px solid #1e40af;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .error-message {
+            background: #fef2f2;
+            color: #991b1b;
+            padding: 12px 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            display: none;
+            font-size: 14px;
+            border: 1px solid #fecaca;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+
+        /* 响应式 */
+        @media (max-width: 1024px) {
+            .main-content {
+                flex-direction: column;
+            }
+
+            .left-panel {
+                width: 100%;
+                max-height: 400px;
+            }
+
+            .right-panel {
+                min-height: 500px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部导航 -->
+        <div class="header">
+            <div class="header-left">
+                <h1>📄 DocReviewer</h1>
+                <p>AI 文档审核系统</p>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <a href="standards.html" class="log-link">📚 标准管理</a>
+                <a href="logs.html" class="log-link">📊 审核日志</a>
+            </div>
+        </div>
+
+        <!-- 左右分栏主内容 -->
+        <div class="main-content">
+            <!-- 左侧：操作区 -->
+            <div class="left-panel">
+                <div class="section-title">📤 上传文档</div>
+                
+                <!-- 上传区域 -->
+                <div class="upload-section" id="uploadSection">
+                    <div class="upload-icon">📁</div>
+                    <div class="upload-text">点击或拖拽文档到这里</div>
+                    <div style="color: #94a3b8; font-size: 13px; margin-top: 8px;">支持 .docx 格式</div>
+                    <input type="file" id="fileInput" class="file-input" accept=".docx,.doc">
+                </div>
+
+                <!-- 已选文件 -->
+                <div class="selected-file" id="selectedFile">
+                    <div class="file-info">
+                        <span>📄</span>
+                        <span id="fileName"></span>
+                    </div>
+                    <button class="remove-file" onclick="removeFile()">移除</button>
+                </div>
+
+                <div class="section-title" style="margin-top: 25px;">📋 选择审核标准</div>
+                
+                <!-- 协议选择 -->
+                <select class="protocol-select" id="protocolSelect">
+                    <option value="">正在加载协议...</option>
+                </select>
+
+                <!-- 审核按钮 -->
+                <button class="btn" id="reviewBtn" onclick="startReview()" disabled>
+                    🚀 开始审核
+                </button>
+
+                <!-- 错误信息 -->
+                <div class="error-message" id="errorMessage"></div>
+
+                <!-- 进度条 -->
+                <div class="progress-section" id="progressSection">
+                    <div class="loading">
+                        <div class="spinner"></div>
+                    </div>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="progressFill"></div>
+                    </div>
+                    <div class="progress-text" id="progressText">正在审核文档...</div>
+                </div>
+            </div>
+
+            <!-- 右侧：结果展示区 -->
+            <div class="right-panel">
+                <div class="results-section empty" id="resultsSection">
+                    <!-- 空状态 -->
+                    <div class="empty-state" id="emptyState">
+                        <div class="empty-state-icon">📋</div>
+                        <div class="empty-state-text">上传文档并开始审核，结果将在这里显示</div>
+                    </div>
+
+                    <!-- 有结果时显示 -->
+                    <div id="resultsContent" style="display: none; flex: 1; display: flex; flex-direction: column;">
+                        <div class="section-title">📊 审核结果</div>
+                        
+                        <!-- 摘要卡片 -->
+                        <div class="summary-cards">
+                            <div class="summary-card">
+                                <div class="summary-number" id="totalIssues">0</div>
+                                <div class="summary-label">总问题数</div>
+                            </div>
+                            <div class="summary-card high">
+                                <div class="summary-number" id="highIssues">0</div>
+                                <div class="summary-label">高严重度</div>
+                            </div>
+                            <div class="summary-card medium">
+                                <div class="summary-number" id="mediumIssues">0</div>
+                                <div class="summary-label">中严重度</div>
+                            </div>
+                            <div class="summary-card low">
+                                <div class="summary-number" id="lowIssues">0</div>
+                                <div class="summary-label">低严重度</div>
+                            </div>
+                        </div>
+
+                        <!-- 问题列表 -->
+                        <div class="section-title" style="margin-top: 10px;">📝 问题详情</div>
+                        <div class="issue-list-container" id="issueList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let selectedFile = null;
+        const API_BASE = 'http://localhost:8000';
+
+        // 调试日志
+        function debugLog(message) {
+            const logs = JSON.parse(localStorage.getItem('debugLogs') || '[]');
+            logs.push(`${new Date().toISOString()}: ${message}`);
+            if (logs.length > 50) logs.shift(); // 只保留最近50条
+            localStorage.setItem('debugLogs', JSON.stringify(logs));
+            console.log(message);
+        }
+
+        // 查看日志的函数（在控制台调用 viewLogs()）
+        window.viewLogs = function() {
+            const logs = JSON.parse(localStorage.getItem('debugLogs') || '[]');
+            console.log('=== 调试日志 ===');
+            logs.forEach(log => console.log(log));
+        };
+
+        // 清除日志
+        window.clearLogs = function() {
+            localStorage.removeItem('debugLogs');
+            console.log('日志已清除');
+        };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            debugLog('页面加载完成');
+            loadProtocols();
+            setupUpload();
+            restoreState(); // 恢复之前的状态
+        });
+
+        // 保存状态到 localStorage
+        function saveState() {
+            const state = {
+                fileName: selectedFile ? selectedFile.name : null,
+                protocol: document.getElementById('protocolSelect').value
+            };
+            localStorage.setItem('reviewState', JSON.stringify(state));
+        }
+
+        // 恢复状态
+        function restoreState() {
+            const state = JSON.parse(localStorage.getItem('reviewState') || '{}');
+            if (state.protocol) {
+                // 等待协议加载完成后恢复选择
+                setTimeout(() => {
+                    document.getElementById('protocolSelect').value = state.protocol;
+                    updateReviewButton();
+                }, 500);
+            }
+            if (state.fileName) {
+                document.getElementById('fileName').textContent = state.fileName + ' (需重新选择)';
+                document.getElementById('selectedFile').classList.add('show');
+            }
+        }
+
+        // 防止意外刷新导致数据丢失
+        window.addEventListener('beforeunload', (e) => {
+            const resultsSection = document.getElementById('resultsSection');
+            if (resultsSection.classList.contains('show')) {
+                e.preventDefault();
+                e.returnValue = '审核结果尚未保存，确定要离开吗？';
+                return e.returnValue;
+            }
+        });
+
+        // 加载协议列表
+        async function loadProtocols() {
+            try {
+                const response = await fetch(`${API_BASE}/api/review/protocols`);
+                const data = await response.json();
+                
+                const select = document.getElementById('protocolSelect');
+                select.innerHTML = '<option value="">请选择审核标准</option>';
+                
+                data.protocols.forEach(protocol => {
+                    const option = document.createElement('option');
+                    option.value = protocol.protocol_id;
+                    option.textContent = `${protocol.name} (${protocol.version})`;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('加载协议失败:', error);
+                document.getElementById('protocolSelect').innerHTML = 
+                    '<option value="">加载协议失败，请检查后端服务</option>';
+            }
+        }
+
+        // 设置上传
+        function setupUpload() {
+            const uploadSection = document.getElementById('uploadSection');
+            const fileInput = document.getElementById('fileInput');
+
+            uploadSection.addEventListener('click', () => fileInput.click());
+
+            fileInput.addEventListener('change', (e) => {
+                if (e.target.files.length > 0) {
+                    handleFile(e.target.files[0]);
+                }
+            });
+
+            // 拖拽上传
+            uploadSection.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                uploadSection.classList.add('dragover');
+            });
+
+            uploadSection.addEventListener('dragleave', () => {
+                uploadSection.classList.remove('dragover');
+            });
+
+            uploadSection.addEventListener('drop', (e) => {
+                e.preventDefault();
+                uploadSection.classList.remove('dragover');
+                if (e.dataTransfer.files.length > 0) {
+                    handleFile(e.dataTransfer.files[0]);
+                }
+            });
+        }
+
+        // 处理文件
+        function handleFile(file) {
+            if (!file.name.endsWith('.docx') && !file.name.endsWith('.doc')) {
+                showError('请上传 Word 文档（.docx 或 .doc）');
+                return;
+            }
+
+            selectedFile = file;
+            document.getElementById('fileName').textContent = file.name;
+            document.getElementById('selectedFile').classList.add('show');
+            updateReviewButton();
+            saveState(); // 保存状态
+        }
+
+        // 移除文件
+        function removeFile() {
+            selectedFile = null;
+            document.getElementById('selectedFile').classList.remove('show');
+            document.getElementById('fileInput').value = '';
+            updateReviewButton();
+        }
+
+        // 更新审核按钮状态
+        function updateReviewButton() {
+            const protocol = document.getElementById('protocolSelect').value;
+            const btn = document.getElementById('reviewBtn');
+            btn.disabled = !(selectedFile && protocol);
+        }
+
+        document.getElementById('protocolSelect').addEventListener('change', () => {
+            updateReviewButton();
+            saveState(); // 保存状态
+        });
+
+        // 开始审核
+        async function startReview() {
+            const protocol = document.getElementById('protocolSelect').value;
+            
+            if (!selectedFile || !protocol) {
+                showError('请选择文件和审核标准');
+                return;
+            }
+
+            // 显示进度，隐藏空状态
+            document.getElementById('progressSection').classList.add('show');
+            document.getElementById('errorMessage').classList.remove('show');
+            document.getElementById('reviewBtn').disabled = true;
+            
+            // 隐藏空状态，准备显示结果
+            document.getElementById('emptyState').style.display = 'none';
+            document.getElementById('resultsContent').style.display = 'flex';
+            document.getElementById('resultsSection').classList.remove('empty');
+            
+            // 清空之前的结果
+            document.getElementById('issueList').innerHTML = '';
+            document.getElementById('totalIssues').textContent = '0';
+            document.getElementById('highIssues').textContent = '0';
+            document.getElementById('mediumIssues').textContent = '0';
+            document.getElementById('lowIssues').textContent = '0';
+
+            const formData = new FormData();
+            formData.append('file', selectedFile);
+            formData.append('protocol_id', protocol);
+
+            try {
+                // 使用流式接口
+                const response = await fetch(`${API_BASE}/api/review/document/stream`, {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({ detail: response.statusText }));
+                    throw new Error(errorData.detail || `HTTP ${response.status}`);
+                }
+
+                // 读取流式响应
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let buffer = '';
+                let issueCount = 0;
+                let severityCount = { high: 0, medium: 0, low: 0 };
+
+                while (true) {
+                    const { done, value } = await reader.read();
+                    
+                    if (done) break;
+                    
+                    // 解码数据
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // 处理 SSE 格式的数据
+                    const lines = buffer.split('\n\n');
+                    buffer = lines.pop(); // 保留不完整的行
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = JSON.parse(line.substring(6));
+                            
+                            // 根据类型处理不同的消息
+                            if (data.type === 'status' || data.type === 'init') {
+                                updateProgress(data.message);
+                            } else if (data.type === 'progress') {
+                                updateProgress(`${data.message} (${data.current}/${data.total})`);
+                            } else if (data.type === 'issue') {
+                                // 实时添加问题到列表
+                                issueCount++;
+                                const issue = data.data;
+                                severityCount[issue.severity]++;
+                                
+                                // 更新统计
+                                document.getElementById('totalIssues').textContent = issueCount;
+                                document.getElementById('highIssues').textContent = severityCount.high;
+                                document.getElementById('mediumIssues').textContent = severityCount.medium;
+                                document.getElementById('lowIssues').textContent = severityCount.low;
+                                
+                                // 添加问题到列表
+                                addIssueToList(issue, issueCount);
+                            } else if (data.type === 'complete') {
+                                updateProgress(data.message);
+                                
+                                // 如果没有问题，显示提示
+                                if (issueCount === 0) {
+                                    document.getElementById('issueList').innerHTML = 
+                                        '<div style="text-align: center; padding: 40px; color: #10b981; font-size: 16px;">🎉 恭喜！未发现任何问题</div>';
+                                }
+                                
+                                console.log(`审核完成，共发现 ${data.total_issues} 个问题`);
+                            } else if (data.type === 'error') {
+                                throw new Error(data.message);
+                            }
+                        }
+                    }
+                }
+                
+            } catch (error) {
+                console.error('审核错误:', error);
+                showError(`审核失败: ${error.message}\n\n请检查：\n1. 后端服务是否正常运行\n2. DeepSeek API Key 是否配置正确\n3. 查看终端日志获取详细错误信息`);
+                
+                // 恢复空状态
+                document.getElementById('emptyState').style.display = 'block';
+                document.getElementById('resultsContent').style.display = 'none';
+                document.getElementById('resultsSection').classList.add('empty');
+            } finally {
+                document.getElementById('progressSection').classList.remove('show');
+                document.getElementById('reviewBtn').disabled = false;
+            }
+        }
+
+        // 更新进度提示
+        function updateProgress(message) {
+            document.getElementById('progressText').textContent = message;
+        }
+
+        // 添加问题到列表（实时）
+        function addIssueToList(issue, index) {
+            const issueList = document.getElementById('issueList');
+            
+            const issueDiv = document.createElement('div');
+            issueDiv.className = `issue-item ${issue.severity}`;
+            issueDiv.style.animation = 'fadeIn 0.3s ease-in';
+            issueDiv.innerHTML = `
+                <div class="issue-header">
+                    <div class="issue-category">${index}. ${issue.category}</div>
+                    <div class="issue-badge ${issue.severity}">${getSeverityText(issue.severity)}</div>
+                </div>
+                <div class="issue-position">📍 ${issue.position}</div>
+                <div class="issue-text">${issue.original_text}</div>
+                <div class="issue-description">❌ ${issue.issue_description}</div>
+                <div class="issue-suggestion">💡 ${issue.suggestion}</div>
+                <div style="margin-top: 10px; color: #94a3b8; font-size: 12px;">
+                    置信度: ${(issue.confidence * 100).toFixed(0)}% | 规则: ${issue.rule_id}
+                </div>
+            `;
+            
+            issueList.appendChild(issueDiv);
+            
+            // 滚动到最新的问题
+            issueDiv.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // 显示结果（保留用于兼容，但现在主要用流式）
+        function displayResults(result) {
+            console.log('=== displayResults 被调用 ===');
+            console.log('selectedFile:', selectedFile);
+            console.log('protocol:', document.getElementById('protocolSelect').value);
+            debugger
+            // 更新摘要
+            document.getElementById('totalIssues').textContent = result.total_issues;
+            document.getElementById('highIssues').textContent = result.summary.by_severity.high || 0;
+            document.getElementById('mediumIssues').textContent = result.summary.by_severity.medium || 0;
+            document.getElementById('lowIssues').textContent = result.summary.by_severity.low || 0;
+
+            // 显示问题列表
+            const issueList = document.getElementById('issueList');
+            issueList.innerHTML = '';
+
+            if (result.issues.length === 0) {
+                issueList.innerHTML = '<div style="text-align: center; padding: 40px; color: #26de81; font-size: 18px;">🎉 恭喜！未发现任何问题</div>';
+            } else {
+                result.issues.forEach((issue, index) => {
+                    const issueDiv = document.createElement('div');
+                    issueDiv.className = `issue-item ${issue.severity}`;
+                    issueDiv.innerHTML = `
+                        <div class="issue-header">
+                            <div class="issue-category">${index + 1}. ${issue.category}</div>
+                            <div class="issue-badge ${issue.severity}">${getSeverityText(issue.severity)}</div>
+                        </div>
+                        <div class="issue-position">📍 位置: ${issue.position}</div>
+                        <div class="issue-text">原文: ${issue.original_text}</div>
+                        <div class="issue-description">❌ 问题: ${issue.issue_description}</div>
+                        <div class="issue-suggestion">💡 建议: ${issue.suggestion}</div>
+                        <div style="margin-top: 10px; color: #999; font-size: 12px;">
+                            置信度: ${(issue.confidence * 100).toFixed(0)}% | 规则: ${issue.rule_id}
+                        </div>
+                    `;
+                    issueList.appendChild(issueDiv);
+                });
+            }
+
+            document.getElementById('resultsSection').classList.add('show');
+            
+            console.log('=== displayResults 执行完成 ===');
+            console.log('selectedFile after:', selectedFile);
+            console.log('protocol after:', document.getElementById('protocolSelect').value);
+        }
+
+        // 获取严重度文本
+        function getSeverityText(severity) {
+            const map = {
+                'high': '高',
+                'medium': '中',
+                'low': '低'
+            };
+            return map[severity] || severity;
+        }
+
+        // 显示错误
+        function showError(message) {
+            const errorDiv = document.getElementById('errorMessage');
+            errorDiv.textContent = message;
+            errorDiv.classList.add('show');
+            // setTimeout(() => {
+            //     errorDiv.classList.remove('show');
+            // }, 5000);
+        }
+    </script>
+</body>
+</html>
+

@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>审核日志查看器 - DocReviewer</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #1e40af 100%);
+            min-height: 100vh;
+            padding: 0;
+            margin: 0;
+        }
+
+        .container {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .header {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .header h1 {
+            font-size: 28px;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .header p {
+            font-size: 14px;
+            opacity: 0.9;
+            margin: 0;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-link {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 8px;
+            text-decoration: none;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .nav-link:hover {
+            background: rgba(255,255,255,0.3);
+            transform: translateY(-2px);
+        }
+
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            overflow: hidden;
+        }
+
+        .main-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .section-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #e2e8f0;
+        }
+
+        .nav-tab {
+            padding: 10px 20px;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            color: #64748b;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s;
+            font-weight: 500;
+        }
+
+        .nav-tab:hover {
+            color: #1e40af;
+        }
+
+        .nav-tab.active {
+            color: #1e40af;
+            border-bottom-color: #1e40af;
+        }
+
+        .tab-content {
+            display: none;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .session-list {
+            display: grid;
+            gap: 15px;
+        }
+
+        .session-item {
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border-left: 4px solid #1e40af;
+        }
+
+        .session-item:hover {
+            background: #eff6ff;
+            transform: translateX(4px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+        }
+
+        .session-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .session-name {
+            font-weight: 600;
+            font-size: 16px;
+            color: #333;
+        }
+
+        .session-time {
+            color: #999;
+            font-size: 14px;
+        }
+
+        .session-stats {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+
+        .log-detail {
+            display: none;
+        }
+
+        .log-detail.show {
+            display: block;
+        }
+
+        .back-btn {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+
+        .back-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(30, 64, 175, 0.4);
+        }
+
+        .log-section {
+            margin-bottom: 30px;
+        }
+
+        .log-section h3 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+            color: white;
+            padding: 15px;
+            border-radius: 12px;
+            text-align: center;
+        }
+
+        .stat-value {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 5px;
+        }
+
+        .stat-label {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+
+        .chunk-list {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        .chunk-item {
+            background: #f8fafc;
+            padding: 18px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border-left: 4px solid #1e40af;
+            transition: all 0.2s;
+        }
+
+        .chunk-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            transform: translateX(4px);
+        }
+
+        .chunk-item.error {
+            border-left-color: #ef4444;
+        }
+
+        .chunk-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+
+        .chunk-text {
+            background: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-family: monospace;
+            font-size: 13px;
+            max-height: 100px;
+            overflow-y: auto;
+        }
+
+        .chunk-rules {
+            margin: 10px 0;
+            font-size: 14px;
+        }
+
+        .rule-tag {
+            display: inline-block;
+            background: #e9ecef;
+            padding: 3px 8px;
+            border-radius: 3px;
+            margin: 2px;
+            font-size: 12px;
+        }
+
+        .llm-response {
+            background: #e8f5e9;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .error-msg {
+            background: #ffebee;
+            color: #c62828;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+        }
+
+        .expand-btn {
+            background: #1e40af;
+            color: white;
+            border: none;
+            padding: 6px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 13px;
+            margin-top: 10px;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+
+        .expand-btn:hover {
+            background: #1e3a8a;
+        }
+
+        .prompt-detail {
+            display: none;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+        }
+
+        .prompt-detail.show {
+            display: block;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 顶部导航 -->
+        <div class="header">
+            <div class="header-left">
+                <h1>📊 审核日志</h1>
+                <p>查看大模型调用记录和审核详情</p>
+            </div>
+            <div class="nav-links">
+                <a href="index.html" class="nav-link">📄 文档审核</a>
+                <a href="standards.html" class="nav-link">📚 标准管理</a>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="main-card">
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="switchTab('recent')">最近审核</button>
+                <button class="nav-tab" onclick="switchTab('stats')">统计分析</button>
+            </div>
+
+            <!-- 最近审核列表 -->
+            <div id="recent-tab" class="tab-content active">
+                <div id="session-list" class="session-list">
+                    <div class="loading">加载中...</div>
+                </div>
+            </div>
+
+            <!-- 统计分析 -->
+            <div id="stats-tab" class="tab-content">
+                <div class="loading">功能开发中...</div>
+            </div>
+
+            <!-- 日志详情 -->
+            <div id="log-detail" class="log-detail">
+                <button class="back-btn" onclick="backToList()">← 返回列表</button>
+                
+                <div class="log-section">
+                    <h3>基本信息</h3>
+                    <div id="basic-info"></div>
+                </div>
+
+                <div class="log-section">
+                    <h3>统计信息</h3>
+                    <div id="stats-info" class="stat-grid"></div>
+                </div>
+
+                <div class="log-section">
+                    <h3>审核详情</h3>
+                    <div id="chunks-info" class="chunk-list"></div>
+                </div>
+            </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentSessionId = null;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadRecentSessions();
+        });
+
+        // 切换标签
+        function switchTab(tabName) {
+            document.querySelectorAll('.nav-tab').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+            
+            event.target.classList.add('active');
+            document.getElementById(`${tabName}-tab`).classList.add('active');
+        }
+
+        // 加载最近的审核会话
+        async function loadRecentSessions() {
+            try {
+                const response = await fetch(`${API_BASE}/api/review/logs/recent?limit=20`);
+                const data = await response.json();
+                
+                const listDiv = document.getElementById('session-list');
+                
+                if (data.sessions.length === 0) {
+                    listDiv.innerHTML = '<div class="loading">暂无审核记录</div>';
+                    return;
+                }
+                
+                listDiv.innerHTML = '';
+                data.sessions.forEach(session => {
+                    const sessionId = session.file.replace('_summary.txt', '');
+                    const item = document.createElement('div');
+                    item.className = 'session-item';
+                    item.onclick = () => loadSessionDetail(sessionId);
+                    
+                    item.innerHTML = `
+                        <div class="session-header">
+                            <div class="session-name">📄 ${sessionId}</div>
+                            <div class="session-time">${new Date(session.modified).toLocaleString('zh-CN')}</div>
+                        </div>
+                        <div class="session-stats">
+                            <span>点击查看详情 →</span>
+                        </div>
+                    `;
+                    
+                    listDiv.appendChild(item);
+                });
+            } catch (error) {
+                console.error('加载会话列表失败:', error);
+                document.getElementById('session-list').innerHTML = 
+                    '<div class="loading">加载失败，请检查后端服务</div>';
+            }
+        }
+
+        // 加载会话详情
+        async function loadSessionDetail(sessionId) {
+            try {
+                const response = await fetch(`${API_BASE}/api/review/logs/${sessionId}`);
+                const data = await response.json();
+                
+                currentSessionId = sessionId;
+                
+                // 显示详情页
+                document.getElementById('recent-tab').style.display = 'none';
+                document.getElementById('log-detail').classList.add('show');
+                
+                // 基本信息
+                document.getElementById('basic-info').innerHTML = `
+                    <p><strong>文档名称:</strong> ${data.document_name}</p>
+                    <p><strong>使用协议:</strong> ${data.protocol_id}</p>
+                    <p><strong>开始时间:</strong> ${new Date(data.start_time).toLocaleString('zh-CN')}</p>
+                    <p><strong>结束时间:</strong> ${new Date(data.end_time).toLocaleString('zh-CN')}</p>
+                `;
+                
+                // 统计信息
+                const stats = data.statistics;
+                document.getElementById('stats-info').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.total_chunks}</div>
+                        <div class="stat-label">总块数</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.successful_llm_calls}</div>
+                        <div class="stat-label">成功调用</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.total_issues_found}</div>
+                        <div class="stat-label">发现问题</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${stats.success_rate}</div>
+                        <div class="stat-label">成功率</div>
+                    </div>
+                `;
+                
+                // 审核详情
+                const chunksDiv = document.getElementById('chunks-info');
+                chunksDiv.innerHTML = '';
+                
+                data.chunks.forEach((chunk, index) => {
+                    const chunkDiv = document.createElement('div');
+                    chunkDiv.className = `chunk-item ${chunk.error ? 'error' : ''}`;
+                    
+                    const rulesHtml = chunk.relevant_rules.map(r => 
+                        `<span class="rule-tag">${r.category}: ${r.rule_id}</span>`
+                    ).join('');
+                    
+                    chunkDiv.innerHTML = `
+                        <div class="chunk-header">
+                            <span>块 ${index + 1}: ${chunk.chunk_id}</span>
+                            <span>${chunk.success ? '✅ 成功' : '❌ 失败'}</span>
+                        </div>
+                        <div class="chunk-text">${chunk.chunk_text}</div>
+                        <div class="chunk-rules">
+                            <strong>匹配规则 (${chunk.relevant_rules_count}):</strong><br>
+                            ${rulesHtml || '无'}
+                        </div>
+                        ${chunk.error ? `
+                            <div class="error-msg">
+                                <strong>错误:</strong><br>
+                                ${chunk.error}
+                            </div>
+                        ` : `
+                            <div class="llm-response">
+                                <strong>LLM 返回:</strong> 发现 ${chunk.issues_found} 个问题
+                                ${chunk.llm_response.issues ? `
+                                    <ul style="margin-top: 10px;">
+                                        ${chunk.llm_response.issues.map(issue => `
+                                            <li>${issue.category}: ${issue.issue_description}</li>
+                                        `).join('')}
+                                    </ul>
+                                ` : ''}
+                            </div>
+                        `}
+                        <button class="expand-btn" onclick="togglePrompt(${index})">
+                            查看完整 Prompt
+                        </button>
+                        <div id="prompt-${index}" class="prompt-detail">
+                            ${chunk.llm_prompt}
+                        </div>
+                    `;
+                    
+                    chunksDiv.appendChild(chunkDiv);
+                });
+                
+            } catch (error) {
+                console.error('加载会话详情失败:', error);
+                alert('加载失败: ' + error.message);
+            }
+        }
+
+        // 返回列表
+        function backToList() {
+            document.getElementById('log-detail').classList.remove('show');
+            document.getElementById('recent-tab').style.display = 'block';
+            currentSessionId = null;
+        }
+
+        // 切换 Prompt 显示
+        function togglePrompt(index) {
+            const promptDiv = document.getElementById(`prompt-${index}`);
+            promptDiv.classList.toggle('show');
+            event.target.textContent = promptDiv.classList.contains('show') 
+                ? '隐藏 Prompt' 
+                : '查看完整 Prompt';
+        }
+    </script>
+</body>
+</html>
+
