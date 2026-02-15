@@ -32,10 +32,6 @@ class RAGEngineV2:
       * 模型小（~100MB），启动快
       * 适合资源受限环境
     
-    - Alibaba-NLP/gte-Qwen2-1.5B-instruct (千问3) - 生产环境推荐
-      * 支持超长文本（8192 tokens）
-      * 检索准确率最高
-      * 针对 RAG 优化
     """
     
     def __init__(
@@ -68,7 +64,11 @@ class RAGEngineV2:
     def _init_model(self):
         """初始化嵌入模型"""
         try:
+            import os
             from sentence_transformers import SentenceTransformer
+            
+            # 设置国内镜像源（解决网络问题）
+            os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
             
             logger.info(f"🤖 加载语义嵌入模型: {self.model_name}")
             
@@ -78,6 +78,8 @@ class RAGEngineV2:
                 logger.info("   💡 千问3支持超长文本（8192 tokens），检索更准确")
             else:
                 logger.info("   首次运行会自动下载模型（约 100-400MB），请稍候...")
+            
+            logger.info("   使用镜像源: https://hf-mirror.com")
             
             self.model = SentenceTransformer(self.model_name)
             
