@@ -62,33 +62,47 @@ class RAGEngineV2:
         self._build_vector_index()
     
     def _init_model(self):
-        """初始化嵌入模型"""
+        """初始化嵌入模型（使用 FlagEmbedding 官方库）"""
         try:
             import os
-            from sentence_transformers import SentenceTransformer
             
             # 设置国内镜像源（解决网络问题）
             os.environ['HF_ENDPOINT'] = 'https://hf-mirror.com'
             
             logger.info(f"🤖 加载语义嵌入模型: {self.model_name}")
+            logger.info("   使用 FlagEmbedding 官方库")
             
-            # 根据模型给出下载提示
-            if "qwen" in self.model_name.lower():
-                logger.info("   首次运行会自动下载千问3模型（约 3GB），请稍候...")
-                logger.info("   💡 千问3支持超长文本（8192 tokens），检索更准确")
-            else:
-                logger.info("   首次运行会自动下载模型（约 100-400MB），请稍候...")
+            # 优先使用 FlagEmbedding（BGE 官方库）
+            try:
+                from FlagEmbedding import FlagModel
+                
+                logger.info("   正在加载模型（如已缓存则直接加载）...")
+                self.model = FlagModel(
+                    self.model_name,
+                    query_instruction_for_retrieval="为这个句子生成表示以用于检索相关文章：",
+                    use_fp16=False  # CPU 模式使用 FP32
+                )
+                self._use_flag_embedding = True
+                logger.info(f"✅ 模型加载完成（FlagEmbedding）")
+                
+            except ImportError:
+                logger.warning("   ⚠️ 未安装 FlagEmbedding，尝试使用 sentence-transformers")
+                
+                # 回退到 sentence-transformers
+                from sentence_transformers import SentenceTransformer
+                
+                self.model = SentenceTransformer(
+                    self.model_name,
+                    device='cpu'
+                )
+                self._use_flag_embedding = False
+                logger.info(f"✅ 模型加载完成（sentence-transformers）")
+                logger.info(f"   模型维度: {self.model.get_sentence_embedding_dimension()}")
             
-            logger.info("   使用镜像源: https://hf-mirror.com")
-            
-            self.model = SentenceTransformer(self.model_name)
-            
-            logger.info(f"✅ 模型加载完成")
-            logger.info(f"   模型维度: {self.model.get_sentence_embedding_dimension()}")
-            
-        except ImportError:
-            logger.error("❌ 未安装 sentence-transformers，请运行：")
-            logger.error("   pip install sentence-transformers torch")
+        except ImportError as e:
+            logger.error("❌ 未安装必要的库，请运行：")
+            logger.error("   pip install -U FlagEmbedding")
+            logger.error("   或者: pip install sentence-transformers torch")
             raise
         except Exception as e:
             logger.error(f"❌ 模型加载失败: {e}")
@@ -152,12 +166,22 @@ class RAGEngineV2:
         
         # 使用 BGE 模型进行向量化（批量处理）
         logger.info(f"   正在向量化 {len(corpus)} 条规则...")
-        self.rule_vectors = self.model.encode(
-            corpus,
-            batch_size=32,
-            show_progress_bar=True,
-            normalize_embeddings=True  # 归一化，便于计算余弦相似度
-        )
+        
+        if self._use_flag_embedding:
+            # FlagEmbedding 的编码方式
+            self.rule_vectors = self.model.encode(corpus)
+            # 归一化
+            import numpy as np
+            norms = np.linalg.norm(self.rule_vectors, axis=1, keepdims=True)
+            self.rule_vectors = self.rule_vectors / norms
+        else:
+            # sentence-transformers 的编码方式
+            self.rule_vectors = self.model.encode(
+                corpus,
+                batch_size=32,
+                show_progress_bar=True,
+                normalize_embeddings=True
+            )
         
         # 构建 FAISS 索引（可选，用于大规模检索加速）
         if self.use_faiss:
@@ -196,10 +220,16 @@ class RAGEngineV2:
         logger.debug(f"🔍 {'混合' if use_hybrid else '语义'}检索: 文本='{text[:50]}...', 协议={protocol_id}")
         
         # 向量化查询文本
-        query_vector = self.model.encode(
-            [text],
-            normalize_embeddings=True
-        )[0]
+        if self._use_flag_embedding:
+            query_vector = self.model.encode([text])[0]
+            # 归一化
+            import numpy as np
+            query_vector = query_vector / np.linalg.norm(query_vector)
+        else:
+            query_vector = self.model.encode(
+                [text],
+                normalize_embeddings=True
+            )[0]
         
         # 如果指定了协议，先过滤
         if protocol_id:

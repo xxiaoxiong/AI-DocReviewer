@@ -5,8 +5,9 @@
 import sys
 from pathlib import Path
 
-# 添加 backend 到路径
-backend_dir = Path(__file__).parent / "backend"
+# 添加 backend 到路径（从 TestData/script 向上两级到项目根目录）
+project_root = Path(__file__).parent.parent.parent
+backend_dir = project_root / "backend"
 sys.path.insert(0, str(backend_dir))
 
 from loguru import logger
@@ -23,7 +24,9 @@ def test_semantic_search():
     # 1. 初始化引擎
     print("\n📦 步骤 1: 初始化 RAG 引擎...")
     try:
-        standards_dir = Path(__file__).parent / "standards" / "protocols"
+        # 从 TestData/script 向上两级到项目根目录，再到 standards/protocols
+        project_root = Path(__file__).parent.parent.parent
+        standards_dir = project_root / "standards" / "protocols"
         rag_v2 = RAGEngineV2(standards_dir=str(standards_dir))
         print("✅ RAG V2 (BGE 语义检索) 初始化成功")
         use_v2 = True
@@ -81,13 +84,21 @@ def test_semantic_search():
         print()
         
         try:
-            results = rag_v2.retrieve_relevant_rules(
-                text=query,
-                protocol_id=test_protocol,
-                top_k=3,
-                use_hybrid=use_v2,  # V2 使用混合检索
-                min_similarity=0.3
-            )
+            # 根据版本调用不同的参数
+            if use_v2:
+                results = rag_v2.retrieve_relevant_rules(
+                    text=query,
+                    protocol_id=test_protocol,
+                    top_k=3,
+                    use_hybrid=True,  # V2 支持混合检索
+                    min_similarity=0.3
+                )
+            else:
+                results = rag_v2.retrieve_relevant_rules(
+                    text=query,
+                    protocol_id=test_protocol,
+                    top_k=3
+                )
             
             if results:
                 print(f"✅ 找到 {len(results)} 条相关规则:")
